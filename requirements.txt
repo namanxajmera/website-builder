@@ -1,0 +1,5 @@
+requests
+termcolor
+selenium 
+beautifulsoup4
+google-genai

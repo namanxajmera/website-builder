@@ -1,0 +1,20 @@
+# Python virtual environment
+venv/
+
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env.local
+.env
+
+# Output folders (site data and AI remakes)
+*_ai/
+*/
+
+# OS files
+.DS_Store
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/ 
