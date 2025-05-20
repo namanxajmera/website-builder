@@ -9,6 +9,9 @@ This project lets you crawl any website, extract its content (HTML, copy, images
 - **Content extraction**: Saves HTML, copy, images, and CSS for each page.
 - **AI-powered site remake**: Uses Google Gemini API to generate modern, responsive HTML+CSS for each page, improving copy and design while preserving brand identity.
 - **Plug-and-play output**: Each page is output as a ready-to-deploy `index.html`.
+- **Full context sent to Gemini**: For each page, the full HTML, CSS, copy, and image URLs are sent to Gemini in a single prompt, leveraging the model's long context window (up to 1M tokens).
+- **No streaming output (yet)**: The Python SDK does not support streaming output from Gemini, so the enhanced HTML is shown after each page is processed.
+- **Optional code execution**: Gemini can execute Python code if enabled, but this is not used by default in this project.
 
 ---
 
@@ -29,6 +32,10 @@ This project lets you crawl any website, extract its content (HTML, copy, images
    source venv/bin/activate
    pip install -r requirements.txt
    ```
+   - (Optional) For better Streamlit performance, install watchdog:
+     ```bash
+     pip install watchdog
+     ```
 
 3. **Set up your Gemini API key**
    - Create a file named `.env.local` in the project root:
@@ -56,6 +63,13 @@ python remake_site_with_ai.py example.com
 ```
 - Output: A new folder (e.g., `example.com_ai/`) with `index.html` for each page, ready to deploy.
 
+### 3. Dashboard (Streamlit UI)
+Run the dashboard for an interactive experience:
+```bash
+streamlit run dashboard.py
+```
+- Enter a website URL and watch the logs and output as the site is processed.
+
 ---
 
 ## Output Structure
@@ -80,9 +94,12 @@ example.com_ai/
 ---
 
 ## Model & Prompting
-- Uses the latest Gemini model (e.g., `gemini-2.5-pro-preview-05-06` or `gemini-2.5-flash-preview-04-17`).
-- Sends original copy, CSS, HTML, and image URLs to Gemini.
+- Uses the latest Gemini model (e.g., `gemini-2.5-flash-preview-05-20`).
+- Sends original copy, CSS, HTML, and image URLs to Gemini for each page.
 - Prompts Gemini to rebuild each page as a modern, visually appealing, responsive HTML+CSS file, maintaining brand theme and improving copy.
+- **Full context is sent for each page** (no chunking needed unless you hit the token limit).
+- **Streaming output is not yet available in the Python SDK.**
+- **Code execution is optional and not enabled by default.**
 
 ---
 
@@ -97,6 +114,7 @@ example.com_ai/
 - If you see errors about missing modules, run `pip install -r requirements.txt` in your virtual environment.
 - If Selenium fails, ensure ChromeDriver is installed and matches your Chrome version.
 - If Gemini API fails, check your API key in `.env.local`.
+- If you hit the Gemini context window limit, consider trimming or chunking your input.
 
 ---
 

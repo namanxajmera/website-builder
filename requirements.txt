@@ -3,3 +3,5 @@ termcolor
 selenium 
 beautifulsoup4
 google-genai
+streamlit
+watchdog

@@ -16,7 +16,7 @@ def load_gemini_api_key():
     cprint("[ERROR] GOOGLE_GEMINI_API_KEY not found in .env.local!", "red")
     return None
 
-def gemini_generate_content(prompt, model="gemini-2.5-flash-preview-04-17"):
+def gemini_generate_content(prompt, model="gemini-2.5-flash-preview-05-20"):
     api_key = load_gemini_api_key()
     if not api_key:
         return None
