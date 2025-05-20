@@ -9,12 +9,17 @@ __pycache__/
 .env.local
 .env
 
-# Output folders (site data and AI remakes)
+# Output folders (ignore *_ai/ anywhere)
 *_ai/
-*/
+
+# Ignore root-level folders that look like domains (scraped site output)
+*.*/
 
 # OS files
 .DS_Store
 
 # Jupyter Notebook checkpoints
-.ipynb_checkpoints/ 
+.ipynb_checkpoints/
+
+# Always include .cursor folder
+!.cursor/ 
