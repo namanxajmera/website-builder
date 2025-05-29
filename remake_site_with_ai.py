@@ -43,54 +43,76 @@ def gemini_generate_entire_site(all_pages_data_str, model_name="gemini-2.5-flash
         return None
     
     prompt = f"""
-You are an expert web development agency tasked with a complete website overhaul.
+You are an expert web development agency tasked with a complete website overhaul and reimagining.
 You will receive data from an existing website, including HTML, CSS, text copy, and image URLs for multiple pages.
 
-Your goal is to rebuild the entire website to be modern, visually appealing, **highly responsive (mobile-first)**, and **SEO-optimized**.
+Your goal is to **analyze this content and rebuild it into the best possible modern website structure**.
+You have full autonomy to decide whether a single-page website or a multi-page website would be most effective for this content.
 
 **Key Requirements:**
 
-1.  **Consistency:** The new website must have a consistent design language, branding (colors, fonts, imagery based on original assets), navigation, header, and footer across all pages.
-2.  **Component-Based Design (Conceptual):** While you will output full HTML for each page, internally, you should design and apply common components (e.g., header, footer, navigation menus, call-to-action buttons, cards) consistently.
-3.  **Responsiveness:** All pages must be fully responsive and adapt gracefully to various screen sizes (desktop, tablet, mobile). Employ fluid layouts, flexible images, and media queries.
-4.  **SEO Optimization:**
+1.  **Structural Decision Making:** 
+    *   Analyze the amount, type, and relationships of the provided content.
+    *   Decide whether a single-page scrolling website or a multi-page website would better serve the content and user experience.
+    *   Consider factors like: content volume, distinct topic areas, navigation complexity, and modern web best practices.
+
+2.  **Design Excellence & Reusable Components:**
+    *   Create a modern, visually appealing, **highly responsive (mobile-first)**, and **SEO-optimized** website.
+    *   Ensure consistent design language, branding (colors, fonts, imagery based on original assets), and user experience.
+    *   **CRITICAL: Design with reusable components in mind.** Think about common elements like headers, footers, navigation menus, hero sections, call-to-action buttons, service cards, testimonial blocks, etc. 
+    *   Apply these conceptual components consistently across the generated page(s) to ensure a cohesive and professional look and feel. While you will output full HTML for each page, your internal design process should emphasize this component-based thinking for consistency.
+
+3.  **Content Modernization:** 
+    *   Improve the original copy for clarity, engagement, and conciseness while retaining the core message.
+    *   Reorganize content logically based on your structural decision.
+    *   Ensure proper information hierarchy and flow.
+
+4.  **Technical Excellence:**
     *   Use semantic HTML5 tags (e.g., `<header>`, `<footer>`, `<nav>`, `<main>`, `<article>`, `<aside>`, `<section>`).
     *   Ensure proper heading hierarchy (H1, H2, H3, etc.).
-    *   Generate descriptive meta tags (title, description) for each page, derived from its content. These should be included in the `<head>` of each page's HTML.
-    *   Optimize images with appropriate `alt` text (you can generate generic descriptive alt text if not provided, e.g., "Image related to [page topic]").
-    *   Ensure clean, well-structured HTML.
-5.  **Content Modernization:** Improve the original copy for clarity, engagement, and conciseness while retaining the core message.
-6.  **Asset Usage:** Utilize the provided image URLs from the original site. Reference them directly in the `<img>` tags.
-7.  **Navigation & Linking:**
-    *   **CRITICAL**: Ensure ALL navigation elements (header menus, footer links, buttons, CTAs) are properly linked to the appropriate pages.
-    *   **Header Navigation**: Every page should have a consistent header with working navigation links to all other pages.
-    *   **Footer Links**: Include working footer navigation that mirrors the main navigation.
-    *   **Cross-Page References**: Any mentions of services, about sections, contact info, etc. should be properly linked to their respective pages.
-    *   **Call-to-Action Buttons**: Ensure buttons like "Contact Us", "Learn More", "Get Started" link to the appropriate pages (usually contact or about pages).
-    *   **Logo Links**: Make sure the site logo/brand name links back to the home page.
-8.  **Output Format:**
-    You MUST output a single JSON object. This JSON object should have two top-level keys:
-    *   `"global_css"`: A string containing all the CSS rules required for the entire website. This will be saved as a single `global_styles.css` file.
-    *   `"pages"`: An object where each key is the original page identifier (e.g., "home", "about_us", "contact_page") and the value is the complete HTML content for that page (as a string).
-        *   Each HTML page should be a full document (starting with `<!DOCTYPE html>`).
-        *   Each HTML page must link to the `global_styles.css` file correctly in its `<head>` section. Given that `global_styles.css` will be at the root of the AI output directory (e.g., `example.com_ai/global_styles.css`) and page HTML files will be in subdirectories (e.g., `example.com_ai/home/index.html`), the link should be `<link rel="stylesheet" href="../global_styles.css">`.
-9.  **Internal Linking:**
-    *   When linking between pages of the rebuilt site, use relative paths. For a page with identifier `target_page_id`, the link from another page (e.g., from `current_page_id/index.html`) should be `../target_page_id/index.html`. For example, a link from the 'home' page to the 'about' page should be `<a href="../about/index.html">About Us</a>`.
-    *   **Navigation Examples**:
-        - Home page link: `<a href="../home/index.html">Home</a>`
-        - About page link: `<a href="../about/index.html">About</a>`
-        - Contact page link: `<a href="../contact/index.html">Contact</a>`
-        - Services page link: `<a href="../services/index.html">Services</a>`
+    *   Generate descriptive meta tags (title, description) for each page, derived from content.
+    *   Optimize images with appropriate `alt` text.
+    *   Utilize the provided image URLs from the original site directly in `<img>` tags.
+
+5.  **Navigation & Linking:**
+    *   For single-page sites: Implement smooth scrolling navigation to sections (e.g., using anchor links like `<a href="#about-section">`).
+    *   For multi-page sites: Ensure consistent navigation with working links between pages.
+    *   Include appropriate call-to-action buttons and internal links.
+    *   Make logos/brand names link to the home/top of the site (i.e., to "index.html" or "#top" for a one-pager).
+
+6.  **Output Format - CRITICAL:**
+    You MUST output a single JSON object with these exact top-level keys:
+
+    *   `"site_structure_decision"`: A brief string explaining your structural choice and reasoning (e.g., "Single-page website chosen for concise content and better user flow. Reusable header/footer components applied.", "Multi-page site with Home, About, Services chosen to properly organize substantial content areas. Consistent header, footer, and navigation components implemented across all pages.").
+
+    *   `"global_css"`: A string containing all CSS rules for the entire website. This will be saved as `global_styles.css`.
+
+    *   `"html_files"`: An object where:
+        - Each key is a filename (e.g., "index.html", "about.html", "services.html"). These filenames will be used directly.
+        - Each value is the complete HTML content for that file (as a string).
+        - For single-page sites: Only "index.html" should be present as a key in this object.
+        - For multi-page sites: The main landing page MUST be keyed as "index.html". Additional pages should have simple, descriptive filenames (e.g., "about.html", "contact.html").
+        - All HTML files will be saved in the same root directory alongside `global_styles.css`.
+        - Links *between* generated HTML pages (if any) should use simple relative paths (e.g., `<a href="about.html">`, `<a href="services.html">`).
+        - All HTML files must link to the global CSS file using a simple relative path, like `<link rel="stylesheet" href="global_styles.css">`.
+        - Each HTML file should be a complete document starting with `<!DOCTYPE html>`.
+
+7.  **Content Integration Guidelines:**
+    *   Use ALL provided content strategically - don't discard valuable information.
+    *   If creating a single-page site, organize content into logical sections with clear headings and corresponding navigation.
+    *   If creating multi-page site, distribute content meaningfully across pages.
+    *   Maintain the essence and value propositions from the original site.
+    *   Ensure contact information, services, and key messaging are prominently featured.
 
 **Input Data (Original Website Structure):**
-The following XML-like structure contains the data for all crawled pages. Each `<page id="...">` attribute corresponds to the page identifier you should use as keys in the `"pages"` object of your JSON output.
+The following contains data from all crawled pages. Use this content to make your structural decisions and build the new site:
+
 <website_data>
 {all_pages_data_str}
 </website_data>
 
 ---
-**IMPORTANT**: Respond ONLY with the JSON object as specified. Do not include any other text, explanations, or markdown formatting around the JSON.
-The HTML content within the JSON should be pure HTML.
+**IMPORTANT**: Respond ONLY with the JSON object as specified above. Do not include any other text, explanations, or markdown formatting around the JSON.
 ---
 """
     
@@ -131,7 +153,7 @@ The HTML content within the JSON should be pure HTML.
         try:
             if response.parts:
                 response_text = "".join(part.text for part in response.parts if hasattr(part, 'text'))
-            else: # Fallback if .parts is empty but .text might work (older API behavior or specific cases)
+            else: 
                 response_text = response.text 
         except Exception as e:
             cprint(f"[WARN] Could not access response.text or response.parts directly: {e}", "yellow")
@@ -141,11 +163,11 @@ The HTML content within the JSON should be pure HTML.
                 cprint(f"[DEBUG] Safety ratings: {response.prompt_feedback.safety_ratings}", "yellow")
             if response.candidates and response.candidates[0].finish_reason:
                  cprint(f"[ERROR] Generation candidate finished due to: {response.candidates[0].finish_reason}", "red")
-                 if response.candidates[0].finish_reason.name == "MAX_TOKENS":
+                 if hasattr(response.candidates[0].finish_reason, 'name') and response.candidates[0].finish_reason.name == "MAX_TOKENS":
                      cprint("[HINT] The model may have run out of output tokens. Consider a model with larger output capacity or reducing prompt/output complexity.", "yellow")
-                 elif response.candidates[0].finish_reason.name == "SAFETY":
+                 elif hasattr(response.candidates[0].finish_reason, 'name') and response.candidates[0].finish_reason.name == "SAFETY":
                      cprint("[HINT] Content generation stopped due to safety settings. Review safety ratings above.", "yellow")
-            return None # Critical error if we can't get text
+            return None
 
         if not response_text:
             cprint("[ERROR] Gemini response was empty or contained no text parts.", "red")
@@ -174,14 +196,16 @@ The HTML content within the JSON should be pure HTML.
         # Validate response structure
         if not isinstance(ai_json_response, dict):
             raise ValueError("Response is not a JSON object")
+        if "site_structure_decision" not in ai_json_response:
+            raise ValueError("Missing 'site_structure_decision' key in response")
         if "global_css" not in ai_json_response:
             raise ValueError("Missing 'global_css' key in response")
-        if "pages" not in ai_json_response:
-            raise ValueError("Missing 'pages' key in response")
-        if not isinstance(ai_json_response["pages"], dict):
-            raise ValueError("'pages' value is not an object")
+        if "html_files" not in ai_json_response:
+            raise ValueError("Missing 'html_files' key in response")
+        if not isinstance(ai_json_response["html_files"], dict):
+            raise ValueError("'html_files' value is not an object")
             
-        pages_count = len(ai_json_response["pages"])
+        pages_count = len(ai_json_response["html_files"])
         css_size_kb = len(ai_json_response["global_css"]) / 1024
         cprint(f"[SUCCESS] Parsed AI response: {pages_count} pages, {css_size_kb:.1f}KB CSS", "green")
         
@@ -364,7 +388,7 @@ def main():
         sys.exit(1)
 
     # Validate AI response structure (already did in gemini_generate_entire_site, but good for safety)
-    if not ("global_css" in ai_response and "pages" in ai_response and isinstance(ai_response["pages"], dict)):
+    if not ("site_structure_decision" in ai_response and "global_css" in ai_response and "html_files" in ai_response and isinstance(ai_response["html_files"], dict)):
         cprint(f"\n[ERROR] Invalid AI response structure after receiving from Gemini.", "red")
         cprint(f"[DEBUG] Response keys: {list(ai_response.keys()) if isinstance(ai_response, dict) else 'Not a dict'}", "yellow")
         sys.exit(1)
@@ -373,6 +397,10 @@ def main():
     cprint("💾 SAVING AI-GENERATED WEBSITE", "green", attrs=["bold"])
     cprint("="*50, "green")
 
+    # Display AI's structural decision
+    if "site_structure_decision" in ai_response:
+        cprint(f"[AI DECISION] {ai_response['site_structure_decision']}", "magenta", attrs=["bold"])
+    
     # Save global CSS
     cprint("[INFO] Saving global stylesheet...", "cyan")
     try:
@@ -385,56 +413,49 @@ def main():
         cprint(f"  [ERROR] Failed to save global CSS: {e}", "red")
         sys.exit(1) # Critical failure if CSS can't be saved
 
-    # Save individual pages
+    # Save HTML files directly in root output directory
     saved_page_count = 0
     failed_page_save_count = 0
     
-    for page_id, page_html in ai_response["pages"].items():
-        cprint(f"[INFO] Saving AI-generated content for page: {page_id}", "cyan")
+    for filename, page_html_content in ai_response["html_files"].items():
+        cprint(f"[INFO] Saving HTML file: {filename}", "cyan")
         
-        if not isinstance(page_html, str):
-            cprint(f"  [WARN] HTML content for page '{page_id}' is not a string (type: {type(page_html)}), skipping save.", "magenta")
+        # Basic validation for filename
+        if not filename.endswith(".html") or "/" in filename or "\\" in filename:
+            cprint(f"  [WARN] Skipping invalid filename from AI: {filename}", "magenta")
+            failed_page_save_count += 1
+            continue
+            
+        if not isinstance(page_html_content, str):
+            cprint(f"  [WARN] HTML content for '{filename}' is not a string (type: {type(page_html_content)}), skipping.", "magenta")
             failed_page_save_count += 1
             continue
 
         try:
-            # Create page directory
-            page_out_dir = os.path.join(out_folder, page_id)
-            os.makedirs(page_out_dir, exist_ok=True)
-            
-            # Save main HTML file
-            output_html_path = os.path.join(page_out_dir, "index.html")
+            # Save HTML file directly in root output directory
+            output_html_path = os.path.join(out_folder, filename)
             with open(output_html_path, "w", encoding="utf-8") as f:
-                f.write(page_html)
+                f.write(page_html_content)
             
-            html_size_kb = len(page_html) / 1024
-            cprint(f"    ✓ Saved index.html ({html_size_kb:.1f}KB)", "green")
-            
-            # Copy original reference files
-            original_page_dir = os.path.join(site_folder, page_id)
-            if os.path.isdir(original_page_dir):
-                reference_files_copied_count = 0
-                for fname in ["url.txt", "images.txt", "copy.txt", "css.txt", "page.html"]:
-                    src = os.path.join(original_page_dir, fname)
-                    dst = os.path.join(page_out_dir, f"original_{fname}")
-                    if os.path.exists(src):
-                        try:
-                            shutil.copy2(src, dst)
-                            reference_files_copied_count += 1
-                        except Exception as e_copy:
-                            cprint(f"    ⚠ Could not copy reference file {fname} for {page_id}: {e_copy}", "yellow")
-                
-                if reference_files_copied_count > 0:
-                    cprint(f"    ✓ Copied {reference_files_copied_count} original reference files for {page_id}", "green")
-            else:
-                cprint(f"    [WARN] Original page directory not found for reference files: {original_page_dir}", "magenta")
-
+            html_size_kb = len(page_html_content) / 1024
+            cprint(f"    ✓ Saved {filename} ({html_size_kb:.1f}KB)", "green")
             saved_page_count += 1
-            cprint(f"  [SUCCESS] Successfully completed saving for page: {page_id}", "green", attrs=["bold"])
             
         except Exception as e_save:
-            cprint(f"  [ERROR] Failed to save files for page {page_id}: {e_save}", "red")
+            cprint(f"  [ERROR] Failed to save {filename}: {e_save}", "red")
             failed_page_save_count += 1
+
+    # Copy original crawled site data to a subfolder for reference
+    cprint("[INFO] Preserving original crawled data for reference...", "cyan")
+    try:
+        originals_ref_dir = os.path.join(out_folder, "original_crawled_data")
+        if os.path.exists(site_folder):
+            shutil.copytree(site_folder, originals_ref_dir, dirs_exist_ok=True)
+            cprint(f"  ✓ Original data preserved in: {originals_ref_dir}", "green")
+        else:
+            cprint(f"  [WARN] Source folder {site_folder} not found for reference copy", "yellow")
+    except Exception as e_copy:
+        cprint(f"  [WARN] Could not copy original crawled data: {e_copy}", "yellow")
 
     # Final summary
     cprint("\n" + "="*70, "green")
@@ -442,28 +463,41 @@ def main():
     cprint("="*70, "green")
     
     if saved_page_count > 0:
-        cprint(f"[SUCCESS] {saved_page_count} pages were successfully generated and saved.", "green", attrs=["bold"])
+        cprint(f"[SUCCESS] {saved_page_count} HTML files were successfully generated and saved.", "green", attrs=["bold"])
         cprint(f"[SUCCESS] Output directory: {out_folder}", "green", attrs=["bold"])
         
         if failed_page_save_count > 0:
-            cprint(f"[WARN] {failed_page_save_count} pages encountered issues during saving.", "yellow")
+            cprint(f"[WARN] {failed_page_save_count} files encountered issues during saving.", "yellow")
         
         cprint("\n📁 Generated files include:", "cyan")
-        cprint(f"  • global_styles.css (Global stylesheet for the new site)", "cyan")
-        # List only successfully saved pages from AI response
-        successfully_saved_page_ids = [pid for pid, html in ai_response["pages"].items() if isinstance(html, str)][:5] # Show first 5
-        for page_id in successfully_saved_page_ids:
-            cprint(f"  • {page_id}/index.html (Modernized page content)", "cyan")
-        if len(ai_response["pages"]) > 5:
-            cprint(f"  • ... and {len(ai_response['pages']) - 5} more page(s).", "cyan")
+        cprint(f"  • global_styles.css (Global stylesheet)", "cyan")
         
-        cprint(f"\n🌐 Your modernized website is ready! To preview, open any index.html file from the '{out_folder}' directory in your browser.", "green", attrs=["bold"])
+        # List saved HTML files
+        successfully_saved_files = [filename for filename in ai_response["html_files"].keys() 
+                                  if isinstance(ai_response["html_files"][filename], str) 
+                                  and filename.endswith(".html") 
+                                  and "/" not in filename and "\\" not in filename][:5]
+        
+        for filename in successfully_saved_files:
+            cprint(f"  • {filename} (Ready-to-deploy HTML page)", "cyan")
+        if len(ai_response["html_files"]) > 5:
+            cprint(f"  • ... and {len(ai_response['html_files']) - 5} more HTML file(s).", "cyan")
+            
+        cprint(f"  • original_crawled_data/ (Reference folder with original site data)", "cyan")
+        
+        # Check for index.html
+        if "index.html" in successfully_saved_files:
+            cprint(f"\n🚀 DEPLOYMENT READY: Your site has an index.html and is ready to deploy!", "green", attrs=["bold"])
+            cprint(f"   Deploy to Vercel: Run 'vercel' in the {out_folder} directory", "cyan")
+            cprint(f"   Or open {out_folder}/index.html in your browser to preview locally", "cyan")
+        else:
+            cprint(f"\n⚠️  Note: No index.html found. You may need to manually designate a main page for deployment.", "yellow")
         
     else:
-        cprint(f"[ERROR] No pages were successfully saved from the AI response, although the AI call may have succeeded.", "red")
+        cprint(f"[ERROR] No HTML files were successfully saved from the AI response.", "red")
         if failed_page_save_count > 0:
-            cprint(f"[INFO] {failed_page_save_count} pages encountered issues during the saving process.", "yellow")
-        sys.exit(1) # Indicate failure if no pages saved
+            cprint(f"[INFO] {failed_page_save_count} files encountered issues during the saving process.", "yellow")
+        sys.exit(1) # Indicate failure if no files saved
 
     cprint("="*70, "green")
 
