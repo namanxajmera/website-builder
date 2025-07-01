@@ -170,7 +170,7 @@ def run_full_process(target_url):
 
     # AI Remake
     remake_cmd = [sys.executable, "remake_site_with_ai.py", site_folder, 
-                  "--model", st.session_state.get("ai_model", "gemini-2.5-flash-preview-05-20"),
+                  "--model", st.session_state.get("ai_model", "gemini-2.5-flash"),
                   "--temperature", str(st.session_state.get("ai_temperature", 0.5))]
     ai_return_code, _ = run_subprocess_and_log(remake_cmd, "ai")
     st.session_state.ai_output_folder = site_folder.rstrip('/').rstrip('\\') + "_ai"
@@ -414,7 +414,7 @@ with st.container():
         with col1:
             ai_model = st.selectbox(
                 "AI Model",
-                ["gemini-2.5-flash-preview-05-20", "gemini-1.5-pro-latest"],
+                ["gemini-2.5-flash", "gemini-2.5-pro"],
                 help="Flash: Faster processing | Pro: More comprehensive analysis"
             )
         with col2:

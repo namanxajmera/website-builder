@@ -29,7 +29,7 @@ def load_gemini_api_key() -> Optional[str]:
         cprint("[INFO] Please set your API key: export GOOGLE_GEMINI_API_KEY=your-api-key", "yellow")
         return None
 
-def gemini_generate_entire_site(all_pages_data_str: str, model_name: str = "gemini-2.5-flash-preview-05-20", temperature: float = 0.5) -> Optional[Dict[str, Any]]:
+def gemini_generate_entire_site(all_pages_data_str: str, model_name: str = "gemini-2.5-flash", temperature: float = 0.5) -> Optional[Dict[str, Any]]:
     cprint(f"[INFO] Initializing Gemini API for site generation...", "cyan")
     api_key = load_gemini_api_key()
     if not api_key:
@@ -167,8 +167,8 @@ def gemini_generate_entire_site(all_pages_data_str: str, model_name: str = "gemi
 def main() -> None:
     parser = argparse.ArgumentParser(description="Rebuild an entire crawled website using AI with a holistic approach.")
     parser.add_argument("site_folder", help="The folder containing the crawled site data (e.g., example.com).")
-    parser.add_argument("--model", default="gemini-2.5-flash-preview-05-20",
-                        help="Name of the Gemini model to use (e.g., gemini-2.5-flash-preview-05-20, gemini-1.5-pro-latest).")
+    parser.add_argument("--model", default="gemini-2.5-flash",
+                        help="Name of the Gemini model to use (e.g., gemini-2.5-flash, gemini-2.5-pro).")
     parser.add_argument("--temperature", type=float, default=0.5,
                         help="Temperature for AI generation (0.0-1.0, higher values make output more creative/random).")
     
