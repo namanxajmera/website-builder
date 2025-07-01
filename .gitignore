@@ -40,5 +40,18 @@ demo_*/
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
+# Generated site folders (from website builder)
+# Original crawled sites (domain names with dots/colons replaced with underscores)
+*_com_*/
+*_org_*/
+*_net_*/
+*_io_*/
+*_co_*/
+*_me_*/
+*_ai_*/
+
+# AI processed sites (appends _ai to crawled folder names)
+*_ai/
+
 # Always include .cursor folder
 !.cursor/ 
