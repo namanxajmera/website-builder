@@ -5,13 +5,65 @@ from urllib.parse import urljoin, urlparse, quote
 from termcolor import cprint
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException
 from bs4 import BeautifulSoup
 import argparse
 import hashlib
+import json
+import datetime
+import socket
+import ipaddress
+from typing import Optional, Tuple, List
 
 # Default values, can be overridden by CLI args
 DEFAULT_MAX_PAGES = 20
 DEFAULT_CRAWL_DEPTH = 2
+
+# File name constants (consistent with remake_site_with_ai.py)
+COPY_FILENAME = "copy.txt"
+CSS_FILENAME = "css.txt"
+HTML_FILENAME = "page.html"
+IMAGES_FILENAME = "images.txt"
+URL_FILENAME = "url.txt"
+
+def is_safe_url(url: str) -> bool:
+    """Validate URL to prevent SSRF attacks by checking if target IP is public"""
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        
+        if not hostname:
+            cprint(f"[ERROR] Invalid URL: no hostname found in {url}", "red")
+            return False
+            
+        # Resolve hostname to IP
+        try:
+            ip_str = socket.gethostbyname(hostname)
+            ip_obj = ipaddress.ip_address(ip_str)
+            
+            # Check if IP is in private/reserved ranges
+            if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_reserved:
+                cprint(f"[ERROR] SSRF risk detected: {url} resolves to private/reserved IP {ip_str}", "red")
+                return False
+                
+            # Additional checks for common internal ranges
+            if (ip_obj.is_link_local or 
+                str(ip_obj).startswith('169.254.') or  # Link-local
+                str(ip_obj).startswith('224.') or      # Multicast
+                str(ip_obj) == '0.0.0.0'):            # Unspecified
+                cprint(f"[ERROR] SSRF risk detected: {url} resolves to restricted IP {ip_str}", "red")
+                return False
+                
+            cprint(f"[INFO] URL safety check passed: {hostname} -> {ip_str}", "green")
+            return True
+            
+        except socket.gaierror as e:
+            cprint(f"[ERROR] DNS resolution failed for {hostname}: {e}", "red")
+            return False
+            
+    except Exception as e:
+        cprint(f"[ERROR] URL safety validation failed for {url}: {e}", "red")
+        return False
 
 def setup_driver():
     cprint("[INFO] Setting up Chrome WebDriver...", "cyan")
@@ -22,7 +74,10 @@ def setup_driver():
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')  # Added for stability
         driver = webdriver.Chrome(options=chrome_options)
-        cprint("[SUCCESS] Chrome WebDriver initialized successfully", "green")
+        # Set timeouts to prevent hanging
+        driver.set_page_load_timeout(30)  # 30 seconds timeout for page loading
+        driver.implicitly_wait(10)  # 10 seconds for element finding
+        cprint("[SUCCESS] Chrome WebDriver initialized successfully with 30s page load timeout", "green")
         return driver
     except Exception as e:
         cprint(f"[ERROR] Failed to initialize Chrome WebDriver: {e}", "red")
@@ -41,11 +96,25 @@ def is_internal_link(href, base_netloc):
     # We will handle fragment checks specifically in the crawl loop to avoid redundant crawls
     return True
 
-def get_page_content(driver, url):
+def get_page_content(driver, url: str) -> Optional[Tuple[str, str, List[str], List[str]]]:
     cprint(f"[INFO] Loading page content from: {url}", "cyan")
+    
+    # SSRF protection: validate URL safety before making request
+    if not is_safe_url(url):
+        cprint(f"[ERROR] URL blocked for security reasons: {url}", "red")
+        return None, None, None, None
+    
     try:
         driver.get(url)
         cprint(f"[SUCCESS] Page loaded successfully", "green")
+    except TimeoutException:
+        cprint(f"[ERROR] Page load timeout for {url} (exceeded 30 seconds)", "red")
+        return None, None, None, None
+    except Exception as e:
+        cprint(f"[ERROR] Failed to load page {url}: {e}", "red")
+        return None, None, None, None
+    
+    try:
         
         cprint("[INFO] Parsing HTML content...", "cyan")
         html = driver.page_source
@@ -157,25 +226,25 @@ def save_page_data(site_dir, folder_name, url, html, text, images, css_files, in
 
     try:
         # Save URL
-        with open(os.path.join(page_dir, "url.txt"), "w", encoding="utf-8") as f:
+        with open(os.path.join(page_dir, URL_FILENAME), "w", encoding="utf-8") as f:
             f.write(url)
-        cprint("  ✓ Saved url.txt", "green")
+        cprint(f"  ✓ Saved {URL_FILENAME}", "green")
 
         # Save HTML
-        with open(os.path.join(page_dir, "page.html"), "w", encoding="utf-8") as f:
+        with open(os.path.join(page_dir, HTML_FILENAME), "w", encoding="utf-8") as f:
             f.write(html)
-        cprint("  ✓ Saved page.html", "green")
+        cprint(f"  ✓ Saved {HTML_FILENAME}", "green")
 
         # Save text content
-        with open(os.path.join(page_dir, "copy.txt"), "w", encoding="utf-8") as f:
+        with open(os.path.join(page_dir, COPY_FILENAME), "w", encoding="utf-8") as f:
             f.write(text)
-        cprint("  ✓ Saved copy.txt", "green")
+        cprint(f"  ✓ Saved {COPY_FILENAME}", "green")
 
         # Save images
-        with open(os.path.join(page_dir, "images.txt"), "w", encoding="utf-8") as f:
+        with open(os.path.join(page_dir, IMAGES_FILENAME), "w", encoding="utf-8") as f:
             for img_url in images:
                 f.write(img_url + "\n")
-        cprint(f"  ✓ Saved images.txt with {len(images)} image URLs", "green")
+        cprint(f"  ✓ Saved {IMAGES_FILENAME} with {len(images)} image URLs", "green")
 
         # Save CSS (external + inline)
         css_output_content = ""
@@ -188,16 +257,16 @@ def save_page_data(site_dir, folder_name, url, html, text, images, css_files, in
             for style_block in inline_styles:
                  css_output_content += f"<style>\n{style_block}\n</style>\n\n"
             
-        with open(os.path.join(page_dir, "css.txt"), "w", encoding="utf-8") as f:
+        with open(os.path.join(page_dir, CSS_FILENAME), "w", encoding="utf-8") as f:
             f.write(css_output_content)
-        cprint(f"  ✓ Saved css.txt ({len(css_files)} external CSS refs, {len(inline_styles)} inline styles)", "green")
+        cprint(f"  ✓ Saved {CSS_FILENAME} ({len(css_files)} external CSS refs, {len(inline_styles)} inline styles)", "green")
 
         return True
     except Exception as e:
         cprint(f"[ERROR] Failed to save page data files in {page_dir}: {e}", "red")
         return False
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Crawl a website and extract content for AI processing.")
     parser.add_argument("url", help="The website URL to crawl")
     parser.add_argument("--max_pages", type=int, default=DEFAULT_MAX_PAGES,
@@ -314,7 +383,33 @@ def main():
         cprint(f"[DONE] Processed {pages_crawled_count} unique pages. Data saved in '{site_dir}'", "green", attrs=["bold"])
         cprint("="*60, "green")
         
-        print(site_dir) # For dashboard parsing
+        # Generate manifest file for reliable inter-script communication
+        manifest_data = {
+            "version": "1.0",
+            "timestamp": datetime.datetime.now().isoformat(),
+            "crawl_info": {
+                "target_url": target_url,
+                "base_netloc": base_netloc,
+                "max_pages": max_pages,
+                "crawl_depth": crawl_depth,
+                "pages_crawled": pages_crawled_count
+            },
+            "output": {
+                "site_dir": site_dir,
+                "crawled_pages": list(visited_path_query)
+            },
+            "status": "completed"
+        }
+        
+        manifest_path = os.path.join(site_dir, "crawl_manifest.json")
+        try:
+            with open(manifest_path, "w", encoding="utf-8") as f:
+                json.dump(manifest_data, f, indent=2)
+            cprint(f"[SUCCESS] Manifest saved to {manifest_path}", "green")
+        except Exception as e:
+            cprint(f"[ERROR] Failed to save manifest: {e}", "red")
+        
+        print(site_dir) # For dashboard parsing (kept for backward compatibility)
 
     except KeyboardInterrupt:
         cprint("\n[WARN] Crawl interrupted by user", "yellow")

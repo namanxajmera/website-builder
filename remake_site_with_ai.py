@@ -6,115 +6,45 @@ from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import argparse
 import shutil
 import json
+import tempfile
+from typing import Optional, Dict, Any
+
+# --- File name constants ---
+COPY_FILENAME = "copy.txt"
+CSS_FILENAME = "css.txt"
+HTML_FILENAME = "page.html"
+IMAGES_FILENAME = "images.txt"
+URL_FILENAME = "url.txt"
 
 # --- Gemini API helpers ---
-def load_gemini_api_key():
+def load_gemini_api_key() -> Optional[str]:
+    """Load Gemini API key from environment variable."""
     cprint("[INFO] Loading Gemini API key...", "cyan")
-    # Attempt to load from environment variable first
     api_key = os.getenv("GOOGLE_GEMINI_API_KEY")
     if api_key:
         cprint("[SUCCESS] API key loaded from environment variable", "green")
         return api_key
-    
-    # Fallback to .env.local
-    env_path = ".env.local"
-    cprint(f"[INFO] Checking for API key in {env_path}...", "cyan")
-    if not os.path.exists(env_path):
-        cprint("[ERROR] .env.local not found and GOOGLE_GEMINI_API_KEY env var not set!", "red")
-        return None
-    
-    try:
-        with open(env_path, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip().startswith("GOOGLE_GEMINI_API_KEY="):
-                    api_key = line.strip().split("=", 1)[1]
-                    cprint("[SUCCESS] API key loaded from .env.local", "green")
-                    return api_key
-        cprint("[ERROR] GOOGLE_GEMINI_API_KEY not found in .env.local!", "red")
-        return None
-    except Exception as e:
-        cprint(f"[ERROR] Failed to read .env.local: {e}", "red")
+    else:
+        cprint("[ERROR] GOOGLE_GEMINI_API_KEY environment variable not set!", "red")
+        cprint("[INFO] Please set your API key: export GOOGLE_GEMINI_API_KEY=your-api-key", "yellow")
         return None
 
-def gemini_generate_entire_site(all_pages_data_str, model_name="gemini-2.5-flash-preview-05-20"):
+def gemini_generate_entire_site(all_pages_data_str: str, model_name: str = "gemini-2.5-flash-preview-05-20", temperature: float = 0.5) -> Optional[Dict[str, Any]]:
     cprint(f"[INFO] Initializing Gemini API for site generation...", "cyan")
     api_key = load_gemini_api_key()
     if not api_key:
         return None
     
-    prompt = f"""
-You are an expert web development agency tasked with a complete website overhaul and reimagining.
-You will receive data from an existing website, including HTML, CSS, text copy, and image URLs for multiple pages.
-
-Your goal is to **analyze this content and rebuild it into the best possible modern website structure**.
-You have full autonomy to decide whether a single-page website or a multi-page website would be most effective for this content.
-
-**Key Requirements:**
-
-1.  **Structural Decision Making:** 
-    *   Analyze the amount, type, and relationships of the provided content.
-    *   Decide whether a single-page scrolling website or a multi-page website would better serve the content and user experience.
-    *   Consider factors like: content volume, distinct topic areas, navigation complexity, and modern web best practices.
-
-2.  **Design Excellence & Reusable Components:**
-    *   Create a modern, visually appealing, **highly responsive (mobile-first)**, and **SEO-optimized** website.
-    *   Ensure consistent design language, branding (colors, fonts, imagery based on original assets), and user experience.
-    *   **CRITICAL: Design with reusable components in mind.** Think about common elements like headers, footers, navigation menus, hero sections, call-to-action buttons, service cards, testimonial blocks, etc. 
-    *   Apply these conceptual components consistently across the generated page(s) to ensure a cohesive and professional look and feel. While you will output full HTML for each page, your internal design process should emphasize this component-based thinking for consistency.
-
-3.  **Content Modernization:** 
-    *   Improve the original copy for clarity, engagement, and conciseness while retaining the core message.
-    *   Reorganize content logically based on your structural decision.
-    *   Ensure proper information hierarchy and flow.
-
-4.  **Technical Excellence:**
-    *   Use semantic HTML5 tags (e.g., `<header>`, `<footer>`, `<nav>`, `<main>`, `<article>`, `<aside>`, `<section>`).
-    *   Ensure proper heading hierarchy (H1, H2, H3, etc.).
-    *   Generate descriptive meta tags (title, description) for each page, derived from content.
-    *   Optimize images with appropriate `alt` text.
-    *   Utilize the provided image URLs from the original site directly in `<img>` tags.
-
-5.  **Navigation & Linking:**
-    *   For single-page sites: Implement smooth scrolling navigation to sections (e.g., using anchor links like `<a href="#about-section">`).
-    *   For multi-page sites: Ensure consistent navigation with working links between pages.
-    *   Include appropriate call-to-action buttons and internal links.
-    *   Make logos/brand names link to the home/top of the site (i.e., to "index.html" or "#top" for a one-pager).
-
-6.  **Output Format - CRITICAL:**
-    You MUST output a single JSON object with these exact top-level keys:
-
-    *   `"site_structure_decision"`: A brief string explaining your structural choice and reasoning (e.g., "Single-page website chosen for concise content and better user flow. Reusable header/footer components applied.", "Multi-page site with Home, About, Services chosen to properly organize substantial content areas. Consistent header, footer, and navigation components implemented across all pages.").
-
-    *   `"global_css"`: A string containing all CSS rules for the entire website. This will be saved as `global_styles.css`.
-
-    *   `"html_files"`: An object where:
-        - Each key is a filename (e.g., "index.html", "about.html", "services.html"). These filenames will be used directly.
-        - Each value is the complete HTML content for that file (as a string).
-        - For single-page sites: Only "index.html" should be present as a key in this object.
-        - For multi-page sites: The main landing page MUST be keyed as "index.html". Additional pages should have simple, descriptive filenames (e.g., "about.html", "contact.html").
-        - All HTML files will be saved in the same root directory alongside `global_styles.css`.
-        - Links *between* generated HTML pages (if any) should use simple relative paths (e.g., `<a href="about.html">`, `<a href="services.html">`).
-        - All HTML files must link to the global CSS file using a simple relative path, like `<link rel="stylesheet" href="global_styles.css">`.
-        - Each HTML file should be a complete document starting with `<!DOCTYPE html>`.
-
-7.  **Content Integration Guidelines:**
-    *   Use ALL provided content strategically - don't discard valuable information.
-    *   If creating a single-page site, organize content into logical sections with clear headings and corresponding navigation.
-    *   If creating multi-page site, distribute content meaningfully across pages.
-    *   Maintain the essence and value propositions from the original site.
-    *   Ensure contact information, services, and key messaging are prominently featured.
-
-**Input Data (Original Website Structure):**
-The following contains data from all crawled pages. Use this content to make your structural decisions and build the new site:
-
-<website_data>
-{all_pages_data_str}
-</website_data>
-
----
-**IMPORTANT**: Respond ONLY with the JSON object as specified above. Do not include any other text, explanations, or markdown formatting around the JSON.
----
-"""
+    # Load prompt from external file
+    prompt_file = os.path.join(os.path.dirname(__file__), "prompts", "rebuild_prompt.txt")
+    try:
+        with open(prompt_file, "r", encoding="utf-8") as f:
+            prompt_template = f.read()
+        prompt = prompt_template.format(all_pages_data_str=all_pages_data_str)
+        cprint(f"[SUCCESS] Loaded prompt template from {prompt_file}", "green")
+    except Exception as e:
+        cprint(f"[ERROR] Failed to load prompt template: {e}", "red")
+        return None
     
     data_size_kb = len(all_pages_data_str) / 1024
     cprint(f"[INFO] Preparing to send {data_size_kb:.1f}KB of site data to Gemini", "cyan")
@@ -141,7 +71,7 @@ The following contains data from all crawled pages. Use this content to make you
         response = model_instance.generate_content(
             contents=prompt,
             generation_config=genai.types.GenerationConfig(
-                temperature=0.5, 
+                temperature=temperature, 
                 # max_output_tokens=8192, # Explicitly set if needed, flash default is 8192. Pro might be higher.
             )
         )
@@ -234,11 +164,13 @@ The following contains data from all crawled pages. Use this content to make you
                     cprint(f"[DEBUG] Candidate {i} Safety Ratings: {cand.safety_ratings}", "yellow")
         return None
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Rebuild an entire crawled website using AI with a holistic approach.")
     parser.add_argument("site_folder", help="The folder containing the crawled site data (e.g., example.com).")
     parser.add_argument("--model", default="gemini-2.5-flash-preview-05-20",
                         help="Name of the Gemini model to use (e.g., gemini-2.5-flash-preview-05-20, gemini-1.5-pro-latest).")
+    parser.add_argument("--temperature", type=float, default=0.5,
+                        help="Temperature for AI generation (0.0-1.0, higher values make output more creative/random).")
     
     args = parser.parse_args()
 
@@ -256,18 +188,26 @@ def main():
         cprint(f"[ERROR] {site_folder} is not a directory!", "red")
         sys.exit(1)
 
-    # Set up output folder
-    out_folder = site_folder.rstrip('/').rstrip('\\') + "_ai"
-    cprint(f"[INFO] Output folder will be: {out_folder}", "cyan")
+    # Set up atomic output folder creation
+    final_out_folder = site_folder.rstrip('/').rstrip('\\') + "_ai"
+    temp_out_folder = site_folder.rstrip('/').rstrip('\\') + "_ai_temp"
+    cprint(f"[INFO] Final output folder will be: {final_out_folder}", "cyan")
     
-    if os.path.exists(out_folder):
-        cprint(f"[WARN] Output folder {out_folder} already exists, will overwrite files", "magenta")
+    # Clean up any existing temp directory
+    if os.path.exists(temp_out_folder):
+        cprint(f"[INFO] Cleaning up previous temporary directory: {temp_out_folder}", "yellow")
+        try:
+            shutil.rmtree(temp_out_folder)
+        except Exception as e:
+            cprint(f"[ERROR] Failed to clean up temp directory: {e}", "red")
+            sys.exit(1)
     
     try:
-        os.makedirs(out_folder, exist_ok=True)
-        cprint(f"[SUCCESS] Output directory ready: {out_folder}", "green")
+        os.makedirs(temp_out_folder, exist_ok=False)  # Should not exist after cleanup
+        cprint(f"[SUCCESS] Temporary output directory created: {temp_out_folder}", "green")
+        out_folder = temp_out_folder  # Use temp folder during generation
     except Exception as e:
-        cprint(f"[ERROR] Failed to create output directory: {e}", "red")
+        cprint(f"[ERROR] Failed to create temporary output directory: {e}", "red")
         sys.exit(1)
 
     # Scan for page subdirectories
@@ -296,11 +236,11 @@ def main():
         cprint(f"[INFO] Processing page data from directory: {page_subdir_name}", "cyan")
         
         # Define expected files
-        copy_path = os.path.join(page_dir, "copy.txt")
-        css_path = os.path.join(page_dir, "css.txt")
-        html_path = os.path.join(page_dir, "page.html")
-        images_path = os.path.join(page_dir, "images.txt")
-        url_path = os.path.join(page_dir, "url.txt")
+        copy_path = os.path.join(page_dir, COPY_FILENAME)
+        css_path = os.path.join(page_dir, CSS_FILENAME)
+        html_path = os.path.join(page_dir, HTML_FILENAME)
+        images_path = os.path.join(page_dir, IMAGES_FILENAME)
+        url_path = os.path.join(page_dir, URL_FILENAME)
 
         # Check for essential files
         essential_files = [copy_path, html_path, url_path]
@@ -381,7 +321,7 @@ def main():
     cprint("="*50, "cyan")
     
     # Send to AI
-    ai_response = gemini_generate_entire_site(all_pages_data_str, model_name=args.model)
+    ai_response = gemini_generate_entire_site(all_pages_data_str, model_name=args.model, temperature=args.temperature)
 
     if not ai_response:
         cprint("\n[ERROR] AI processing failed - no valid response received from Gemini.", "red")
@@ -400,6 +340,15 @@ def main():
     # Display AI's structural decision
     if "site_structure_decision" in ai_response:
         cprint(f"[AI DECISION] {ai_response['site_structure_decision']}", "magenta", attrs=["bold"])
+    
+    # Save AI decision for dashboard display
+    decision_path = os.path.join(out_folder, "ai_decision.txt")
+    try:
+        with open(decision_path, "w", encoding="utf-8") as f:
+            f.write(ai_response['site_structure_decision'])
+        cprint(f"[INFO] AI decision saved to {decision_path}", "cyan")
+    except Exception as e:
+        cprint(f"[WARN] Failed to save AI decision: {e}", "yellow")
     
     # Save global CSS
     cprint("[INFO] Saving global stylesheet...", "cyan")
@@ -420,9 +369,20 @@ def main():
     for filename, page_html_content in ai_response["html_files"].items():
         cprint(f"[INFO] Saving HTML file: {filename}", "cyan")
         
-        # Basic validation for filename
-        if not filename.endswith(".html") or "/" in filename or "\\" in filename:
-            cprint(f"  [WARN] Skipping invalid filename from AI: {filename}", "magenta")
+        # Enhanced security validation for filename
+        if not filename.endswith(".html"):
+            cprint(f"  [WARN] Skipping non-HTML filename from AI: {filename}", "magenta")
+            failed_page_save_count += 1
+            continue
+        
+        # Normalize and validate path to prevent directory traversal
+        normalized_filename = os.path.normpath(filename)
+        if (normalized_filename != filename or 
+            ".." in normalized_filename or 
+            "/" in normalized_filename or "\\" in normalized_filename or
+            normalized_filename.startswith('.') or
+            any(ord(c) < 32 for c in normalized_filename)):  # Check for control characters
+            cprint(f"  [WARN] Skipping potentially unsafe filename from AI: {filename}", "magenta")
             failed_page_save_count += 1
             continue
             
@@ -430,6 +390,22 @@ def main():
             cprint(f"  [WARN] HTML content for '{filename}' is not a string (type: {type(page_html_content)}), skipping.", "magenta")
             failed_page_save_count += 1
             continue
+
+        # Validate HTML content with BeautifulSoup
+        try:
+            from bs4 import BeautifulSoup
+            parsed_html = BeautifulSoup(page_html_content, "html.parser")
+            # Basic validation: check if parsing succeeded and content is reasonable
+            if not parsed_html or len(str(parsed_html).strip()) < 50:
+                cprint(f"  [WARN] AI-generated HTML for '{filename}' appears to be malformed or too short.", "magenta")
+                cprint(f"        Content preview: {page_html_content[:100]}...", "yellow")
+                # Continue with saving anyway, but log the warning
+            else:
+                cprint(f"  ✓ HTML validation passed for {filename}", "green")
+        except Exception as e_validation:
+            cprint(f"  [WARN] HTML validation failed for '{filename}': {e_validation}", "magenta")
+            cprint(f"        Content preview: {page_html_content[:100]}...", "yellow")
+            # Continue with saving anyway since validation failure doesn't mean unusable content
 
         try:
             # Save HTML file directly in root output directory
@@ -498,6 +474,30 @@ def main():
         if failed_page_save_count > 0:
             cprint(f"[INFO] {failed_page_save_count} files encountered issues during the saving process.", "yellow")
         sys.exit(1) # Indicate failure if no files saved
+
+    # Atomic directory operation: move temp to final location
+    cprint(f"\n[INFO] Finalizing output directory...", "cyan")
+    try:
+        # Handle existing final directory
+        if os.path.exists(final_out_folder):
+            backup_folder = final_out_folder + "_backup_" + str(int(os.path.getmtime(final_out_folder)))
+            cprint(f"[INFO] Backing up existing directory to: {backup_folder}", "yellow")
+            shutil.move(final_out_folder, backup_folder)
+        
+        # Atomic rename from temp to final
+        shutil.move(out_folder, final_out_folder)
+        cprint(f"[SUCCESS] Website successfully generated at: {final_out_folder}", "green", attrs=["bold"])
+        
+        # Update deployment instructions to use final folder
+        if "index.html" in successfully_saved_files:
+            cprint(f"\n🚀 DEPLOYMENT READY: Your site has an index.html and is ready to deploy!", "green", attrs=["bold"])
+            cprint(f"   Deploy to Vercel: Run 'vercel' in the {final_out_folder} directory", "cyan")
+            cprint(f"   Or open {final_out_folder}/index.html in your browser to preview locally", "cyan")
+            
+    except Exception as e:
+        cprint(f"[ERROR] Failed to finalize output directory: {e}", "red")
+        cprint(f"[INFO] Generated files are still available in temporary directory: {out_folder}", "yellow")
+        sys.exit(1)
 
     cprint("="*70, "green")
 

@@ -9,43 +9,30 @@ __pycache__/
 .env.local
 .env
 
-# Output folders (ignore *_ai/ anywhere)
+# Project output directories
+output/
 *_ai/
+*_crawled/
 
-# Scraped site folders (main crawl output)
-# Ignore folders that look like domains or sanitized domain names
-*.*_*/
+# Scraped site folders (common patterns)
+# Domain-like folders
 *.com/
 *.org/
 *.net/
-*.edu/
-*.gov/
 *.io/
 *.co/
-*.uk/
-*.ca/
-*.de/
-*.fr/
-*.jp/
-*.au/
-# Catch sanitized domain names (dots replaced with underscores)
 *_com/
 *_org/
 *_net/
-*_edu/
-*_gov/
 *_io/
-*_co_*/
-*_uk/
-*_ca/
-*_de/
-*_fr/
-*_jp/
-*_au/
-# Generic patterns for domain-like folders
-*.*.*_*/
+*_co/
+
+# Development and testing sites
 localhost_*/
 127_0_0_1_*/
+example_com/
+test_*/
+demo_*/
 
 # OS files
 .DS_Store

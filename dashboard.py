@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import time
 import threading
 import queue
+import json
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -56,10 +57,22 @@ def clear_ui_logs_and_state():
     st.session_state.step_status = {}
     st.session_state.current_preview_file = None
     st.session_state.ai_output_folder = None
-    st.session_state.process_running = False # Ensure this is reset
-    st.session_state.start_process_url = None # Reset process start flag
-    st.session_state.realtime_logs = ""
-    st.session_state.current_step = None
+
+def read_crawl_manifest(potential_site_folders):
+    """Read crawl manifest to get site directory instead of parsing stdout"""
+    for folder in potential_site_folders:
+        if not os.path.isdir(folder):
+            continue
+        manifest_path = os.path.join(folder, "crawl_manifest.json")
+        if os.path.exists(manifest_path):
+            try:
+                with open(manifest_path, "r", encoding="utf-8") as f:
+                    manifest = json.load(f)
+                if manifest.get("status") == "completed":
+                    return manifest["output"]["site_dir"], manifest
+            except Exception as e:
+                print(f"[DASHBOARD_ERROR] Failed to read manifest {manifest_path}: {e}")
+    return None, None
 
 def update_step_status(step_key, status):
     st.session_state.step_status[step_key] = status
@@ -197,14 +210,25 @@ def run_full_process(target_url):
     crawl_return_code, crawl_output = run_subprocess_and_log(crawl_cmd, "crawl")
     site_folder = None
     if crawl_return_code == 0:
-        lines = crawl_output.strip().split('\n')
-        if lines:
-            last_line = lines[-1].strip()
-            if os.path.isdir(last_line) and (domain_base.replace('.','_') in last_line or domain_base in last_line):
-                site_folder = last_line
-        if not site_folder: # Fallback search
-            candidates = sorted([d for d in Path(".").iterdir() if d.is_dir() and d.name.startswith(domain_base.replace('.','_')) and not d.name.endswith("_ai")], key=lambda p: p.stat().st_mtime, reverse=True)
-            if candidates: site_folder = str(candidates[0])
+        # Try manifest-based approach first (reliable)
+        potential_folders = sorted([d for d in Path(".").iterdir() if d.is_dir() and d.name.startswith(domain_base.replace('.','_')) and not d.name.endswith("_ai")], key=lambda p: p.stat().st_mtime, reverse=True)
+        site_folder, manifest = read_crawl_manifest(potential_folders)
+        
+        if site_folder:
+            print(f"[DASHBOARD_INFO] Site folder found via manifest: {site_folder} (crawled {manifest['crawl_info']['pages_crawled']} pages)")
+        else:
+            # Legacy fallback: parse stdout (for backward compatibility)
+            lines = crawl_output.strip().split('\n')
+            if lines:
+                last_line = lines[-1].strip()
+                if os.path.isdir(last_line) and (domain_base.replace('.','_') in last_line or domain_base in last_line):
+                    site_folder = last_line
+                    print(f"[DASHBOARD_WARN] Using legacy stdout parsing for site folder: {site_folder}")
+            
+            # Final fallback: directory search
+            if not site_folder and potential_folders:
+                site_folder = str(potential_folders[0])
+                print(f"[DASHBOARD_WARN] Using directory search fallback: {site_folder}")
         
         if not site_folder or not os.path.isdir(site_folder):
             msg = f"Crawl output folder not found for '{domain_base}'."
@@ -215,7 +239,9 @@ def run_full_process(target_url):
         st.error("Crawl process failed. Check logs."); st.session_state.process_running = False; return
 
     # AI Remake
-    remake_cmd = [sys.executable, "remake_site_with_ai.py", site_folder]
+    remake_cmd = [sys.executable, "remake_site_with_ai.py", site_folder, 
+                  "--model", st.session_state.get("ai_model", "gemini-2.5-flash-preview-05-20"),
+                  "--temperature", str(st.session_state.get("ai_temperature", 0.5))]
     ai_return_code, _ = run_subprocess_and_log(remake_cmd, "ai")
     st.session_state.ai_output_folder = site_folder.rstrip('/').rstrip('\\') + "_ai"
 
@@ -223,6 +249,18 @@ def run_full_process(target_url):
         update_step_status("generate", "completed")
         st.success(f"🎉 Modernization complete! Output in: {st.session_state.ai_output_folder}")
         print(f"[DASHBOARD_SUCCESS] Modernization complete! Output: {st.session_state.ai_output_folder}")
+        
+        # Display AI structural decision if available
+        decision_file = os.path.join(st.session_state.ai_output_folder, "ai_decision.txt")
+        if os.path.exists(decision_file):
+            try:
+                with open(decision_file, "r", encoding="utf-8") as f:
+                    ai_decision = f.read().strip()
+                if ai_decision:
+                    st.info(f"🧠 **AI Structural Decision:** {ai_decision}")
+            except Exception as e:
+                print(f"[DASHBOARD_WARN] Failed to read AI decision file: {e}")
+        
         available_html_files = [f.name for f in Path(st.session_state.ai_output_folder).iterdir() if f.is_file() and f.name.endswith('.html')]
         if "index.html" in available_html_files: st.session_state.current_preview_file = "index.html"
         elif available_html_files: st.session_state.current_preview_file = available_html_files[0]
@@ -291,11 +329,32 @@ with main_content_area:
             help="Enter the full URL (e.g., https://www.example.com) of the website you want to modernize.",
             label_visibility="collapsed"
         )
+        
+        # AI Configuration Options
+        col_model, col_temp = st.columns([2, 1])
+        with col_model:
+            ai_model = st.selectbox(
+                "AI Model",
+                ["gemini-2.5-flash-preview-05-20", "gemini-1.5-pro-latest"],
+                index=0,
+                help="Select the Gemini model: Flash for speed, Pro for comprehensive analysis"
+            )
+        with col_temp:
+            ai_temperature = st.slider(
+                "Creativity",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.5,
+                step=0.1,
+                help="Higher values make AI output more creative and varied"
+            )
     
     with col_run:
         if st.button("🚀 Modernize Website!", type="primary", use_container_width=True, disabled=st.session_state.process_running):
             if url_input_val and (url_input_val.startswith("http://") or url_input_val.startswith("https://")):
                 st.session_state.start_process_url = url_input_val
+                st.session_state.ai_model = ai_model
+                st.session_state.ai_temperature = ai_temperature
                 st.session_state.process_running = True
                 st.rerun()
             else:

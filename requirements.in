@@ -1,0 +1,17 @@
+# Core dependencies for AI Website Modernizer
+# Use pip-compile to generate pinned requirements.txt from this file
+
+# Web scraping and automation
+requests
+selenium 
+beautifulsoup4
+
+# Terminal colors and styling
+termcolor
+
+# Google Gemini AI integration
+google-genai
+
+# Dashboard and UI
+streamlit
+watchdog  # Optional: for better Streamlit performance

@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-06-30T23:43:08.396331",
+  "crawl_info": {
+    "target_url": "https://paytience.me",
+    "base_netloc": "paytience.me",
+    "max_pages": 20,
+    "crawl_depth": 2,
+    "pages_crawled": 1
+  },
+  "output": {
+    "site_dir": "paytience_me",
+    "crawled_pages": [
+      "https://paytience.me"
+    ]
+  },
+  "status": "completed"
+}
