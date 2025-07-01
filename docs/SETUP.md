@@ -113,7 +113,7 @@ sudo apt-get install chromium-driver
 # Or download directly from: https://chromedriver.chromium.org/
 ```
 
-**Verification**: The crawler's [`setup_driver()`](./crawl_site.py#L68-L85) function will test ChromeDriver initialization.
+**Verification**: The crawler's [`setup_driver()`](./crawl_site.py#L68-L85) function will initialize ChromeDriver.
 
 ### Step 5: Google Gemini API Configuration
 
@@ -209,9 +209,9 @@ python remake_site_with_ai.py example_com --model gemini-2.5-flash-preview-05-20
 # The output will be in example_com_ai/ directory
 ```
 
-## 🔍 Verification & Testing
+## 🔍 Installation Verification
 
-### Test Installation
+### Verify Installation
 
 1. **Verify Python Environment**:
    ```bash
@@ -219,7 +219,7 @@ python remake_site_with_ai.py example_com --model gemini-2.5-flash-preview-05-20
    pip list | wc -l  # Should show 50+ packages
    ```
 
-2. **Test ChromeDriver Setup**:
+2. **Verify ChromeDriver Setup**:
    ```bash
    python -c "
    from selenium import webdriver
@@ -232,7 +232,7 @@ python remake_site_with_ai.py example_com --model gemini-2.5-flash-preview-05-20
    "
    ```
 
-3. **Test API Key Configuration**:
+3. **Verify API Key Configuration**:
    ```bash
    python -c "
    import os
@@ -242,7 +242,7 @@ python remake_site_with_ai.py example_com --model gemini-2.5-flash-preview-05-20
    "
    ```
 
-4. **Test Streamlit Launch**:
+4. **Verify Streamlit Launch**:
    ```bash
    streamlit hello
    # Should open browser to Streamlit demo
@@ -251,7 +251,7 @@ python remake_site_with_ai.py example_com --model gemini-2.5-flash-preview-05-20
 
 ### Run Sample Transformation
 
-Test the complete pipeline with a simple website:
+Verify the complete pipeline with a simple website:
 
 ```bash
 # Launch dashboard
@@ -259,9 +259,9 @@ streamlit run dashboard.py
 
 # In the web interface:
 # 1. Enter URL: https://example.com
-# 2. Click "Modernize Website!"
-# 3. Monitor progress in real-time
-# 4. Preview generated site when complete
+# 2. Click "Transform Website!"
+# 3. Wait for processing to complete
+# 4. Click "Open Generated Website" to view in browser
 ```
 
 ## ⚙️ Configuration Options
@@ -415,7 +415,7 @@ source dev-env/bin/activate
 pip install -r requirements.txt
 pip install pip-tools  # For dependency management
 
-# Make changes and test
+# Make changes and verify
 python crawl_site.py --help
 python remake_site_with_ai.py --help
 streamlit run dashboard.py

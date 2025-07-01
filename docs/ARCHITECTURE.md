@@ -167,7 +167,7 @@ if not all(key in ai_response for key in required_keys):
 #### UI Architecture
 - **Component-Based Layout**: Streamlit columns and containers
 - **Real-time Updates**: Session state for live progress tracking
-- **Preview System**: [`display_preview()`](./dashboard.py#L113-L136) with HTML modification
+- **Browser Integration**: Direct file opening in browser tabs for website viewing
 
 ## 🔐 Security Architecture
 

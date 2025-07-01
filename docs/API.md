@@ -316,31 +316,34 @@ def run_subprocess_and_log(command_array, step_key):
 
 ---
 
-##### `display_preview(filename_to_display: str, ai_folder_path_str: str) -> None`
-**Location**: [`dashboard.py:113-136`](./dashboard.py#L113-L136)
+##### `open_website_in_browser(index_file: Path) -> bool`
+**Location**: [`dashboard.py:457-471`](./dashboard.py#L457-L471)
 
-Renders HTML preview with navigation and styling modifications.
+Opens the generated website directly in the user's default browser.
 
 ```python
-def display_preview(filename_to_display, ai_folder_path_str):
-    """Display HTML preview with enhanced navigation."""
-    html_file_path = Path(ai_folder_path_str) / filename_to_display
+def open_website_in_browser(index_file):
+    """Open generated website in default browser."""
+    import platform
+    import subprocess
+    system = platform.system()
     
-    with open(html_file_path, "r", encoding="utf-8") as f:
-        html_content = f.read()
-    
-    modified_html = modify_html_for_preview(html_content, filename_to_display, ai_folder_path_str)
-    st.components.v1.html(modified_html, height=600, scrolling=True)
+    if system == "Darwin":  # macOS
+        subprocess.run(["open", str(index_file.absolute())])
+    elif system == "Windows":
+        subprocess.run(["start", str(index_file.absolute())], shell=True)
+    else:  # Linux
+        subprocess.run(["xdg-open", str(index_file.absolute())])
 ```
 
 **Parameters**:
-- `filename_to_display` (str): HTML filename to preview
-- `ai_folder_path_str` (str): Path to AI-generated website folder
+- `index_file` (Path): Path to the generated HTML file
 
 **Features**:
-- CSS integration from `global_styles.css`
-- Internal link navigation support
-- External link handling (opens in new tab)
+- Cross-platform browser opening (macOS, Windows, Linux)
+- Uses system default browser
+- Full website functionality with proper navigation
+- No embedded preview limitations
 
 ---
 

@@ -42,7 +42,7 @@ AI Website Modernizer is an intelligent web transformation tool that analyzes ex
 ### 📊 **User-Friendly Interface**
 - **Interactive Dashboard**: Streamlit-powered UI with [`run_full_process()`](./dashboard.py#L184-L272)
 - **Real-Time Monitoring**: Live progress tracking via [`run_subprocess_and_log()`](./dashboard.py#L139-L182)
-- **Preview Capability**: Instant preview with [`display_preview()`](./dashboard.py#L113-L136)
+- **Direct Browser Access**: Open generated websites directly in browser tabs
 - **Process Transparency**: Clear status indicators and detailed feedback
 
 ## 🔄 How It Works
