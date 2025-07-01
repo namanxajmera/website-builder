@@ -1,12 +1,5 @@
 # 🏗️ AI Website Modernizer - Architecture Guide
 
----
-**FILE**: ARCHITECTURE.md  
-**PURPOSE**: Technical architecture and system design documentation  
-**AUDIENCE**: engineers  
-**CODE_REFERENCES**: 45  
----
-
 ## System Overview
 
 AI Website Modernizer is a Python-based application that transforms existing websites into modern, responsive designs using Google Gemini AI. The system follows a three-stage pipeline architecture with clear separation of concerns, robust error handling, and security-first design principles.

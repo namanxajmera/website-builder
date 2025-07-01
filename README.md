@@ -280,16 +280,6 @@ python -m pytest tests/  # When tests are added
 # Submit pull request
 ```
 
-## 📈 Roadmap
-
-- [ ] **Multi-Model Support**: Integration with Claude, GPT-4, and other AI models
-- [ ] **Template System**: Pre-built modern design templates
-- [ ] **Batch Processing**: Support for multiple websites simultaneously
-- [ ] **Performance Analytics**: Before/after performance comparison
-- [ ] **Custom Branding**: Advanced brand guideline integration
-- [ ] **API Development**: RESTful API for programmatic access
-
----
 
 ## 📄 License
 

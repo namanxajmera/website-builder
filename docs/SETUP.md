@@ -1,12 +1,5 @@
 # ⚙️ AI Website Modernizer - Complete Setup Guide
 
----
-**FILE**: SETUP.md  
-**PURPOSE**: Complete installation and configuration guide  
-**AUDIENCE**: both  
-**CODE_REFERENCES**: 24  
----
-
 ## Overview
 
 This comprehensive setup guide walks you through installing and configuring the AI Website Modernizer on your system. Follow these steps to get the application running locally for website transformation.

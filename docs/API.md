@@ -1,12 +1,5 @@
 # 🔌 AI Website Modernizer - API Documentation
 
----
-**FILE**: API.md  
-**PURPOSE**: Component APIs, function references, and usage examples  
-**AUDIENCE**: engineers  
-**CODE_REFERENCES**: 38  
----
-
 ## Overview
 
 This document provides comprehensive API documentation for the AI Website Modernizer components, including function signatures, parameters, return values, and usage examples with direct code references.
